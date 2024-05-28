@@ -7,6 +7,7 @@ import torch.nn.init as init
 import einops
 import numpy as np
 from torchvision.ops import roi_pool
+import cv2
 
 from config_cropping import cfg
 
@@ -253,6 +254,13 @@ if __name__ == '__main__':
     print(cls.shape, box.shape)
     print('classification', cls)
     print('box', box)
-    
+    x,y,w,h = box[0]
+    x = int(x)
+    y = int(y)
+    w = int(w)
+    h = int(h)
+    img = cv2.imread('images.jpg')
+    img_c = img[y:y+h, x:x+w]
+    cv2.imwrite('img_c.jpg', img_c)
     # model = ComClassifier()
     # print(model(x))
