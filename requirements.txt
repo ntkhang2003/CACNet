@@ -1,0 +1,11 @@
+einops
+lmdb
+matplotlib
+numpy
+opencv_contrib_python
+Pillow
+scipy
+tensorboardX
+torch
+torchvision
+tqdm
