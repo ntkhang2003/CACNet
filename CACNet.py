@@ -7,8 +7,13 @@ import torch.nn.init as init
 import einops
 import numpy as np
 from torchvision.ops import roi_pool
+import torchvision.transforms as transforms
+import torchvision.transforms.functional
 import cv2
-
+import PIL
+from PIL import Image
+IMAGE_NET_MEAN = [0.485, 0.456, 0.406]
+IMAGE_NET_STD = [0.229, 0.224, 0.225]
 from config_cropping import cfg
 
 class vgg_base(nn.Module):
@@ -241,26 +246,37 @@ if __name__ == '__main__':
     device = torch.device('cuda:0')
     x = torch.randn(2,3, cfg.image_size[0],cfg.image_size[1])
     model = CACNet(loadweights=True)
-    cls,kcm,box = model(x)
-    print(cls.shape, box.shape)
-    print('classification', cls)
-    print('box', box)
+    # cls,kcm,box = model(x)
+    # print(cls.shape, box.shape)
+    # print('classification', cls)
+    # print('box', box)
     
-    t_img = torchvision.io.read_image('images.jpg')
-    t_img = t_img.to(torch.float)  # Convert to float
-    resized_tensor = F.interpolate(t_img.unsqueeze(0), size=(224, 224), mode='bilinear', align_corners=False).squeeze(0)
-    batch_tensor = resized_tensor.unsqueeze(0).repeat(2, 1, 1, 1)
+    t_img = Image.open('image.jpg').convert('RGB')
+    width, height = t_img.size
+    t_img = t_img.resize((224,224))
+    image_transformer = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=IMAGE_NET_MEAN, std=IMAGE_NET_STD)])
+    batch_tensor = image_transformer(t_img).unsqueeze(0)
     cls,kcm,box = model(batch_tensor)
     print(cls.shape, box.shape)
     print('classification', cls)
     print('box', box)
-    x,y,w,h = box[0]
+    x = box[0][0]/224*width
+    y = box[0][1]/224*height
+    w = box[0][2]/224*width
+    h = box[0][3]/224*height
+    bbox = torch.Tensor([x,y,w,h])
+    print(bbox)
+    x,w,y,h = bbox
     x = int(x)
-    y = int(y)
     w = int(w)
+    y = int(y)
     h = int(h)
-    img = cv2.imread('images.jpg')
-    img_c = img[y:y+h, x:x+w]
+    img = cv2.imread('image.jpg')
+    img = cv2.resize(img, (224,224))
+    img_c = img[x:w,h:y]
+    print(img_c)
     cv2.imwrite('img_c.jpg', img_c)
     # model = ComClassifier()
     # print(model(x))
