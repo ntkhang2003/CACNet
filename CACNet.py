@@ -16,6 +16,7 @@ IMAGE_NET_MEAN = [0.485, 0.456, 0.406]
 IMAGE_NET_STD = [0.229, 0.224, 0.225]
 from config_cropping import cfg
 
+
 class vgg_base(nn.Module):
     def __init__(self, loadweights=True):
         super(vgg_base, self).__init__()
@@ -245,38 +246,33 @@ class CACNet(nn.Module):
 if __name__ == '__main__':
     device = torch.device('cuda:0')
     x = torch.randn(2,3, cfg.image_size[0],cfg.image_size[1])
+    weight_file = "./pretrained_model/best-FLMS_iou.pth"
     model = CACNet(loadweights=True)
+    model.load_state_dict(torch.load(weight_file, map_location=device))
     # cls,kcm,box = model(x)
     # print(cls.shape, box.shape)
     # print('classification', cls)
     # print('box', box)
-    
-    t_img = Image.open('image.jpg').convert('RGB')
+    image_file = 'E:\Thesis\CACNet\cow.jpg'
+    t_img = Image.open(image_file).convert('RGB')
     width, height = t_img.size
     t_img = t_img.resize((224,224))
     image_transformer = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=IMAGE_NET_MEAN, std=IMAGE_NET_STD)])
     batch_tensor = image_transformer(t_img).unsqueeze(0)
-    cls,kcm,box = model(batch_tensor)
-    print(cls.shape, box.shape)
-    print('classification', cls)
-    print('box', box)
-    x = box[0][0]/224*width
-    y = box[0][1]/224*height
-    w = box[0][2]/224*width
-    h = box[0][3]/224*height
-    bbox = torch.Tensor([x,y,w,h])
-    print(bbox)
-    x,w,y,h = bbox
-    x = int(x)
-    w = int(w)
-    y = int(y)
-    h = int(h)
-    img = cv2.imread('image.jpg')
-    img = cv2.resize(img, (224,224))
-    img_c = img[x:w,h:y]
-    print(img_c)
-    cv2.imwrite('img_c.jpg', img_c)
+    logits,kcm,crop = model(batch_tensor, only_classify=False)
+    crop[:,0::2] = crop[:,0::2] / 224 * width
+    crop[:,1::2] = crop[:,1::2] / 224 * height
+    pred_crop = crop.detach().cpu()
+    pred_crop[:,0::2] = torch.clip(pred_crop[:,0::2], min=0, max=width)
+    pred_crop[:,1::2] = torch.clip(pred_crop[:,1::2], min=0, max=height)
+
+    best_crop = pred_crop[0].numpy().tolist()
+    best_crop = [int(x) for x in best_crop]
+    print(best_crop)
+    source_img = cv2.imread(image_file)
+    croped_img  = source_img[best_crop[1] : best_crop[3], best_crop[0] : best_crop[2]]
+    cv2.imwrite("cropped.jpg", croped_img)
     # model = ComClassifier()
     # print(model(x))

@@ -11,10 +11,10 @@ from CACNet import CACNet
 import warnings
 warnings.filterwarnings("ignore")
 
-device = torch.device('cuda:{}'.format(cfg.gpu_id))
+device = torch.device('cuda:0')
 
 
-device = torch.device('cuda:{}'.format(cfg.gpu_id))
+# device = torch.device('cuda:{}'.format(cfg.gpu_id))
 results_dir = './results'
 os.makedirs(results_dir, exist_ok=True)
 
@@ -185,7 +185,7 @@ def evaluate_composition_classification(model):
 if __name__ == '__main__':
     weight_file = "./pretrained_model/best-FLMS_iou.pth"
     model = CACNet(loadweights=False)
-    model.load_state_dict(torch.load(weight_file))
+    model.load_state_dict(torch.load(weight_file, map_location=device))
     model = model.to(device).eval()
-    evaluate_on_FCDB_and_FLMS(model, dataset='FCDB', save_results=True)
+    # evaluate_on_FCDB_and_FLMS(model, dataset='FCDB', save_results=True)
     evaluate_on_FCDB_and_FLMS(model, dataset='FLMS', save_results=True)
